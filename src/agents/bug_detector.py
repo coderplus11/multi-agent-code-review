@@ -5,7 +5,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 
 from src.config import MODEL
 from src.logger import get_logger
-from src.state import AgentState
+from ..state import AgentState, ReviewState
 
 _llm = ChatGoogleGenerativeAI(model=MODEL, temperature=0)
 _log = get_logger("bug_detector")
