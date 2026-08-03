@@ -5,7 +5,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 
 from src.config import MODEL
 from src.logger import get_logger
-from src.state import ReviewState
+from src.state import AgentState
 
 _llm = ChatGoogleGenerativeAI(model=MODEL, temperature=0)
 _log = get_logger("summarizer")
@@ -58,7 +58,7 @@ _REPORT_SECTIONS = [
 ]
 
 
-def _build_combined_report(state: ReviewState) -> str:
+def _build_combined_report(state: AgentState) -> str:
     """Concatenate all non-empty specialist reports into one string."""
     sections = [
         f"{header}\n" + "\n".join(state[key])
@@ -68,7 +68,7 @@ def _build_combined_report(state: ReviewState) -> str:
     return "\n\n".join(sections) if sections else "No specialist reports were generated."
 
 
-def summarizer_node(state: ReviewState) -> dict:
+def summarizer_node(state: AgentState) -> dict:
     """Synthesize all specialist reports into a single prioritized review."""
     _log.info("Compiling final review...")
 
@@ -83,5 +83,6 @@ def summarizer_node(state: ReviewState) -> dict:
     ])
 
     return {"final_review": response.content}
+
 
 

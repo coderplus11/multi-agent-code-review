@@ -5,7 +5,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 
 from src.config import MODEL
 from src.logger import get_logger
-from src.state import ReviewState
+from src.state import AgentState
 
 _llm = ChatGoogleGenerativeAI(model=MODEL, temperature=0)
 _log = get_logger("code_quality")
@@ -34,7 +34,7 @@ If the code is clean and well-written, respond with:
 "No code quality issues detected." """
 
 
-def code_quality_node(state: ReviewState) -> dict:
+def code_quality_node(state: AgentState) -> dict:
     """Review the diff for code quality and style issues."""
     _log.info("Checking readability and style...")
 
@@ -44,5 +44,6 @@ def code_quality_node(state: ReviewState) -> dict:
     ])
 
     return {"quality_report": [response.content]}
+
 
 

@@ -5,7 +5,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 
 from src.config import MODEL
 from src.logger import get_logger
-from src.state import ReviewState
+from src.state import AgentState
 
 _llm = ChatGoogleGenerativeAI(model=MODEL, temperature=0)
 _log = get_logger("bug_detector")
@@ -29,7 +29,7 @@ Format your output as a numbered list. If no bugs are found, respond with:
 Be specific: reference line numbers or code snippets from the diff where possible."""
 
 
-def bug_detector_node(state: ReviewState) -> dict:
+def bug_detector_node(state: AgentState) -> dict:
     """Scan the diff for logic and correctness bugs."""
     _log.info("Analyzing for logic errors...")
 
@@ -39,5 +39,6 @@ def bug_detector_node(state: ReviewState) -> dict:
     ])
 
     return {"bug_report": [response.content]}
+
 
 

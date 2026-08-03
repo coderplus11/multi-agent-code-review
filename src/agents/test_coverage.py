@@ -5,7 +5,7 @@ from langchain_core.messages import SystemMessage, HumanMessage
 
 from src.config import MODEL
 from src.logger import get_logger
-from src.state import ReviewState
+from src.state import AgentState
 
 _llm = ChatGoogleGenerativeAI(model=MODEL, temperature=0)
 _log = get_logger("test_coverage")
@@ -31,7 +31,7 @@ If coverage appears adequate, respond with:
 "Test coverage appears sufficient for the changes made." """
 
 
-def test_coverage_node(state: ReviewState) -> dict:
+def test_coverage_node(state: AgentState) -> dict:
     """Identify gaps in test coverage introduced by the diff."""
     _log.info("Evaluating test coverage gaps...")
 
@@ -41,5 +41,6 @@ def test_coverage_node(state: ReviewState) -> dict:
     ])
 
     return {"test_report": [response.content]}
+
 
 
