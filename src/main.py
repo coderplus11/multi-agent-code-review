@@ -1,66 +1,63 @@
-"""Entry point for the multi-agent code review pipeline.
+import os
+from github import Github
+from src.graph import create_review_graph
+from src.state import State
 
-Public API:
-    run_review(code_diff, file_paths) -> str
-"""
+def fetch_other_open_prs(repo_name: str, current_pr_num: int = None) -> list:
+    token = os.getenv("GITHUB_TOKEN")
+    if not token or not repo_name:
+        # Generic mock data for offline/local testing
+        return [
+            {
+                "number": 12,
+                "title": "Refactor Authentication Flow",
+                "author": "developer_1",
+                "files_changed": ["src/agents/security.py", "src/main.py"],
+                "diff": "...sample diff..."
+            }
+        ]
 
-import pathlib
-import sys
-import uuid
+    g = Github(token)
+    repo = g.get_repo(repo_name)
+    open_prs = repo.get_pulls(state='open')
 
-# Ensure the project root is on sys.path so `src.*` imports resolve whether
-# this file is run as `python src/main.py` or `python -m src.main`.
-_PROJECT_ROOT = pathlib.Path(__file__).resolve().parent.parent
-if str(_PROJECT_ROOT) not in sys.path:
-    sys.path.insert(0, str(_PROJECT_ROOT))
+    other_prs = []
+    for pr in open_prs:
+        if current_pr_num and pr.number == current_pr_num:
+            continue
+            
+        other_prs.append({
+            "number": pr.number,
+            "title": pr.title,
+            "author": pr.user.login,
+            "files_changed": [f.filename for f in pr.get_files()],
+            "diff": ""
+        })
 
-from dotenv import load_dotenv
+    return other_prs
 
-load_dotenv()
+def main():
+    repo_name = os.getenv("GITHUB_REPOSITORY", "")
+    current_pr = int(os.getenv("PR_NUMBER", "0")) or None
 
-from src.chunker import prepare_diff
-from src.graph import build_graph
-from src.logger import get_logger
-
-_log = get_logger("main")
-
-
-def run_review(code_diff: str, file_paths: list[str] | None = None) -> str:
-    """Run the multi-agent code review pipeline on a code diff.
-
-    Args:
-        code_diff: A unified diff string (e.g., from `git diff`).
-        file_paths: Optional list of changed file paths for smarter routing.
-
-    Returns:
-        The final review as a formatted string.
-    """
-    graph = build_graph()
-    code_diff = prepare_diff(code_diff)
-
-    initial_state = {
-        "code_diff": code_diff,
-        "file_paths": file_paths or [],
-        "active_agents": [],
-        "bug_report": [],
-        "security_report": [],
-        "quality_report": [],
-        "test_report": [],
-        "final_review": "",
+    initial_state: State = {
+        "pr_number": current_pr,
+        "pr_title": "Add Gemini Multi-Agent System",
+        "diff": "+ def test(): pass",
+        "files_changed": ["src/main.py", "src/state.py"],
+        "other_open_prs": fetch_other_open_prs(repo_name, current_pr),
+        "security_issues": [],
+        "bug_issues": [],
+        "quality_issues": [],
+        "coverage_issues": [],
+        "cross_pr_issues": [],
+        "summary": ""
     }
 
-    config = {"configurable": {"thread_id": str(uuid.uuid4())}}
+    graph = create_review_graph()
+    final_state = graph.invoke(initial_state)
 
-    result = graph.invoke(initial_state, config=config)
-    return result["final_review"]
-
+    print(final_state["summary"])
 
 if __name__ == "__main__":
-    from examples.sample_diff import SAMPLE_DIFF, SAMPLE_FILE_PATHS
-
-    _log.info("Starting multi-agent code review on sample diff")
-
-    review = run_review(SAMPLE_DIFF, SAMPLE_FILE_PATHS)
-
-    _log.info("Review complete")
-    print(review)
+    main()

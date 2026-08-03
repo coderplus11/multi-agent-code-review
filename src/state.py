@@ -1,20 +1,19 @@
-import operator
-from typing import Annotated, TypedDict
+from typing import TypedDict, List, Dict, Any, Optional
 
-
-class ReviewState(TypedDict):
-    # Input
-    code_diff: str
-    file_paths: list[str]
-
-    # Orchestrator routing decisions
-    active_agents: list[str]  # e.g. ["bug_detector", "security", "code_quality", "test_coverage"]
-
-    # Specialist outputs (accumulated via operator.add)
-    bug_report: Annotated[list[str], operator.add]
-    security_report: Annotated[list[str], operator.add]
-    quality_report: Annotated[list[str], operator.add]
-    test_report: Annotated[list[str], operator.add]
-
-    # Final output
-    final_review: str
+class State(TypedDict):
+    pr_number: Optional[int]
+    pr_title: Optional[str]
+    diff: str
+    files_changed: List[str]
+    
+    # Context of other active PRs
+    other_open_prs: List[Dict[str, Any]]
+    
+    # Agent Results
+    security_issues: List[str]
+    bug_issues: List[str]
+    quality_issues: List[str]
+    coverage_issues: List[str]
+    cross_pr_issues: List[str]
+    
+    summary: str
