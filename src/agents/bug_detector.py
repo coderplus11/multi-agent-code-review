@@ -40,3 +40,4 @@ def bug_detector_node(state: ReviewState) -> dict:
 
     return {"bug_report": [response.content]}
 
+
