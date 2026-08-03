@@ -48,7 +48,7 @@ def detect_cross_pr_issues(state: State) -> Dict[str, List[str]]:
         ]
         return {"cross_pr_issues": findings}
 
-    llm = ChatGoogleGenerativeAI(model="gemini-2.5-flash", google_api_key=api_key, temperature=0)
+    # Lazily initialized inside agent function
     
     prompt = f"""Current PR Diff:
 {diff}
@@ -70,6 +70,7 @@ Analyze if these concurrent changes will cause merge conflicts or runtime logic 
         return {"cross_pr_issues": ["Overlapping files detected, but no logical conflicts found."]}
         
     return {"cross_pr_issues": [result_text]}
+
 
 
 

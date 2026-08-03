@@ -7,7 +7,7 @@ from src.config import MODEL
 from src.logger import get_logger
 from src.state import AgentState
 
-_llm = ChatGoogleGenerativeAI(model=MODEL, temperature=0)
+# Lazily initialized inside agent function
 _log = get_logger("summarizer")
 
 _SYSTEM_PROMPT = """You are a Code Review Summarizer. Your job is to synthesize reports from multiple specialist agents into a single, clean, developer-friendly review.
@@ -83,6 +83,7 @@ def summarizer_node(state: AgentState) -> dict:
     ])
 
     return {"final_review": response.content}
+
 
 
 

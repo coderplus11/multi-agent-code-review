@@ -7,7 +7,7 @@ from src.config import MODEL
 from src.logger import get_logger
 from src.state import AgentState
 
-_llm = ChatGoogleGenerativeAI(model=MODEL, temperature=0)
+# Lazily initialized inside agent function
 _log = get_logger("test_coverage")
 
 _SYSTEM_PROMPT = """You are a Test Coverage agent specializing in identifying testing gaps.
@@ -41,6 +41,7 @@ def test_coverage_node(state: AgentState) -> dict:
     ])
 
     return {"test_report": [response.content]}
+
 
 
 

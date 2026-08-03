@@ -7,7 +7,7 @@ from src.config import MODEL
 from src.logger import get_logger
 from src.state import AgentState
 
-_llm = ChatGoogleGenerativeAI(model=MODEL, temperature=0)
+# Lazily initialized inside agent function
 _log = get_logger("code_quality")
 
 _SYSTEM_PROMPT = """You are a Code Quality agent specializing in maintainability and readability.
@@ -44,6 +44,7 @@ def code_quality_node(state: AgentState) -> dict:
     ])
 
     return {"quality_report": [response.content]}
+
 
 
 

@@ -4,12 +4,11 @@ from langchain_google_genai import ChatGoogleGenerativeAI
 
 def analyze_security(state):
     # ...
-    llm = ChatGoogleGenerativeAI(
-        model="gemini-1.5-flash",
-        google_api_key=os.getenv("GEMINI_API_KEY"),
+    # Lazily initialized inside agent function,
         temperature=0
     )
     # ...
+
 
 
 
