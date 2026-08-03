@@ -1,13 +1,13 @@
-"""Code Quality agent: reviews readability, style, and maintainability."""
+﻿"""Code Quality agent: reviews readability, style, and maintainability."""
 
-from langchain_anthropic import ChatAnthropic
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
 
 from src.config import MODEL
 from src.logger import get_logger
 from src.state import ReviewState
 
-_llm = ChatAnthropic(model=MODEL, temperature=0)
+_llm = ChatGoogleGenerativeAI(model=MODEL, temperature=0)
 _log = get_logger("code_quality")
 
 _SYSTEM_PROMPT = """You are a Code Quality agent specializing in maintainability and readability.
@@ -44,3 +44,4 @@ def code_quality_node(state: ReviewState) -> dict:
     ])
 
     return {"quality_report": [response.content]}
+

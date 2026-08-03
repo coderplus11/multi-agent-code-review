@@ -1,13 +1,13 @@
-"""Bug & Logic Detector agent: finds correctness issues in a code diff."""
+﻿"""Bug & Logic Detector agent: finds correctness issues in a code diff."""
 
-from langchain_anthropic import ChatAnthropic
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
 
 from src.config import MODEL
 from src.logger import get_logger
 from src.state import ReviewState
 
-_llm = ChatAnthropic(model=MODEL, temperature=0)
+_llm = ChatGoogleGenerativeAI(model=MODEL, temperature=0)
 _log = get_logger("bug_detector")
 
 _SYSTEM_PROMPT = """You are a Logic & Bug Detector agent specializing in code correctness.
@@ -39,3 +39,4 @@ def bug_detector_node(state: ReviewState) -> dict:
     ])
 
     return {"bug_report": [response.content]}
+

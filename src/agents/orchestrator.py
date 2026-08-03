@@ -1,4 +1,4 @@
-from typing import Dict, Any
+﻿from typing import Dict, Any
 from src.state import State
 
 def orchestrate_review(state: State) -> Dict[str, Any]:
@@ -11,21 +11,21 @@ def format_final_summary(state: State) -> Dict[str, str]:
     cov = "\n".join([f"- {i}" for i in state.get("coverage_issues", [])]) or "- None"
     cross = "\n".join([f"- {i}" for i in state.get("cross_pr_issues", [])]) or "- None"
 
-    summary_md = f"""# 🤖 Multi-Agent Code Review Report
+    summary_md = f"""# ðŸ¤– Multi-Agent Code Review Report
 
-## 🔀 Cross-PR & Developer Overlap Analysis
+## ðŸ”€ Cross-PR & Developer Overlap Analysis
 {cross}
 
-## 🛡️ Security Audit
+## ðŸ›¡ï¸ Security Audit
 {sec}
 
-## 🐛 Bug Detection
+## ðŸ› Bug Detection
 {bugs}
 
-## 🎨 Code Quality & Style
+## ðŸŽ¨ Code Quality & Style
 {qual}
 
-## 🧪 Test Coverage Analysis
+## ðŸ§ª Test Coverage Analysis
 {cov}
 """
     return {"summary": summary_md}

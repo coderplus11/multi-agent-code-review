@@ -1,4 +1,4 @@
-import os
+﻿import os
 from typing import List, Dict, Any
 from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
@@ -42,7 +42,7 @@ def detect_cross_pr_issues(state: State) -> Dict[str, List[str]]:
     api_key = os.getenv("GEMINI_API_KEY")
     if not api_key:
         findings = [
-            f"⚠️ File Collision Warning: PR #{p['pr_number']} ('{p['title']}') by @{p['author']} "
+            f"âš ï¸ File Collision Warning: PR #{p['pr_number']} ('{p['title']}') by @{p['author']} "
             f"also touches: {', '.join(p['overlapping_files'])}"
             for p in overlapping_prs
         ]

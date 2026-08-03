@@ -1,13 +1,13 @@
-"""Summarizer agent: merges all specialist reports into one prioritized review."""
+﻿"""Summarizer agent: merges all specialist reports into one prioritized review."""
 
-from langchain_anthropic import ChatAnthropic
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
 
 from src.config import MODEL
 from src.logger import get_logger
 from src.state import ReviewState
 
-_llm = ChatAnthropic(model=MODEL, temperature=0)
+_llm = ChatGoogleGenerativeAI(model=MODEL, temperature=0)
 _log = get_logger("summarizer")
 
 _SYSTEM_PROMPT = """You are a Code Review Summarizer. Your job is to synthesize reports from multiple specialist agents into a single, clean, developer-friendly review.
@@ -40,14 +40,14 @@ Your output must follow this structure:
 Rules:
 - Merge duplicate findings across agents into a single item.
 - Do not repeat the same issue multiple times.
-- Use concise, actionable language — write for the PR author.
+- Use concise, actionable language â€” write for the PR author.
 - If a section has no items, write "None."
 - Always include the Verdict.
 
 Contradiction resolution:
-- If agents DISAGREE on severity (e.g., Bug Detector calls something critical but Quality agent treats it as a style nit), always escalate to the HIGHER severity and note the disagreement inline: "(severity disputed — escalated to higher)".
+- If agents DISAGREE on severity (e.g., Bug Detector calls something critical but Quality agent treats it as a style nit), always escalate to the HIGHER severity and note the disagreement inline: "(severity disputed â€” escalated to higher)".
 - If agents give CONFLICTING refactor advice for the same code (e.g., one says extract a helper, another says inline it), present both options with a one-line tradeoff and let the author decide.
-- If one agent flags a pattern as a bug but another implicitly accepts it, add it to Suggestions with a note: "(correctness uncertain — recommend team discussion)"."""
+- If one agent flags a pattern as a bug but another implicitly accepts it, add it to Suggestions with a note: "(correctness uncertain â€” recommend team discussion)"."""
 
 
 _REPORT_SECTIONS = [
@@ -83,3 +83,4 @@ def summarizer_node(state: ReviewState) -> dict:
     ])
 
     return {"final_review": response.content}
+

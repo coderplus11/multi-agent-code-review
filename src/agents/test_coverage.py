@@ -1,13 +1,13 @@
-"""Test Coverage agent: identifies untested logic paths and missing edge cases."""
+﻿"""Test Coverage agent: identifies untested logic paths and missing edge cases."""
 
-from langchain_anthropic import ChatAnthropic
+from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
 
 from src.config import MODEL
 from src.logger import get_logger
 from src.state import ReviewState
 
-_llm = ChatAnthropic(model=MODEL, temperature=0)
+_llm = ChatGoogleGenerativeAI(model=MODEL, temperature=0)
 _log = get_logger("test_coverage")
 
 _SYSTEM_PROMPT = """You are a Test Coverage agent specializing in identifying testing gaps.
@@ -41,3 +41,4 @@ def test_coverage_node(state: ReviewState) -> dict:
     ])
 
     return {"test_report": [response.content]}
+
