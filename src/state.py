@@ -1,9 +1,8 @@
 # src/state.py
-from typing import TypedDict, List, Dict, Any
 
 class AgentState(TypedDict):
-    # Your state keys (e.g., pr_details, reviews, etc.)
-    ...
+    # your state definitions...
+    pass
 
-# Alias ReviewState to AgentState so any agent importing ReviewState works
+# ADD THIS LINE AT THE BOTTOM:
 ReviewState = AgentState
