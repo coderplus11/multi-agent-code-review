@@ -1,46 +1,13 @@
-﻿"""Bug & Logic Detector agent: finds correctness issues in a code diff."""
-
+﻿import os
 from langchain_google_genai import ChatGoogleGenerativeAI
-from langchain_core.messages import SystemMessage, HumanMessage
-
 from src.config import MODEL
-from src.logger import get_logger
-from ..state import AgentState, ReviewState
 
-_llm = ChatGoogleGenerativeAI(model=MODEL, temperature=0)
-_log = get_logger("bug_detector")
+def get_llm():
+    api_key = os.getenv("GEMINI_API_KEY") or os.getenv("GOOGLE_API_KEY")
+    if not api_key:
+        raise ValueError("GEMINI_API_KEY / GOOGLE_API_KEY environment variable is missing.")
+    return ChatGoogleGenerativeAI(model=MODEL, temperature=0, google_api_key=api_key)
 
-_SYSTEM_PROMPT = """You are a Logic & Bug Detector agent specializing in code correctness.
-
-Analyze the provided code diff for:
-- Off-by-one errors (wrong loop bounds, fence-post mistakes)
-- Null/None pointer dereferences (using a variable before checking it exists)
-- Infinite loops or missing loop termination conditions
-- Incorrect conditionals (wrong operator, inverted logic, unreachable branches)
-- Integer overflow / underflow risks
-- Incorrect variable mutation inside loops
-- Wrong return values or missing returns
-
-Focus ONLY on correctness bugs. Do not comment on style, security, or test coverage.
-
-Format your output as a numbered list. If no bugs are found, respond with:
-"No logic or correctness issues detected."
-
-Be specific: reference line numbers or code snippets from the diff where possible."""
-
-
-def bug_detector_node(state: AgentState) -> dict:
-    """Scan the diff for logic and correctness bugs."""
-    _log.info("Analyzing for logic errors...")
-
-    response = _llm.invoke([
-        SystemMessage(content=_SYSTEM_PROMPT),
-        HumanMessage(content=f"Code diff to review:\n```\n{state['code_diff']}\n```"),
-    ])
-
-    return {"bug_report": [response.content]}
-
-
-
-
-
+def detect_bugs(state):
+    llm = get_llm()
+    # rest of your detect_bugs logic...
