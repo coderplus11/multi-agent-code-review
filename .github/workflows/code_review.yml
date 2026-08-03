@@ -1,3 +1,4 @@
+# .github/workflows/code_review.yml
 name: Multi-Agent Code Review
 
 on:
@@ -6,7 +7,7 @@ on:
   workflow_dispatch:
     inputs:
       pr_number:
-        description: 'PR Number (Required if running manually)'
+        description: 'PR Number'
         required: false
         type: string
 
@@ -17,7 +18,6 @@ jobs:
       - name: Checkout Code
         uses: actions/checkout@v4
         with:
-          # Checks out the PR branch code when triggered by pull_request_target
           ref: ${{ github.event.pull_request.head.sha || github.ref }}
           fetch-depth: 0
 
@@ -25,7 +25,6 @@ jobs:
         uses: actions/setup-python@v5
         with:
           python-version: '3.11'
-          cache: 'pip'
 
       - name: Install Dependencies
         run: |
