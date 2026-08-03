@@ -1,4 +1,4 @@
-"""Shared logging configuration.
+﻿"""Shared logging configuration.
 
 Call get_logger(name) from any module to obtain a named logger that writes
 to both the terminal and the log file defined in src/config.LOG_FILE.
@@ -37,3 +37,4 @@ def get_logger(name: str) -> logging.Logger:
         _configured = True
 
     return logging.getLogger(f"review.{name}")
+

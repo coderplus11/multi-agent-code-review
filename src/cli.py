@@ -1,4 +1,4 @@
-"""Command-line interface for the multi-agent code review tool.
+﻿"""Command-line interface for the multi-agent code review tool.
 
 Usage examples:
     code-review                        # review staged changes
@@ -111,3 +111,4 @@ def main() -> None:
 
 if __name__ == "__main__":
     main()
+

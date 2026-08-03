@@ -1,9 +1,9 @@
-"""Diff chunking utilities.
+﻿"""Diff chunking utilities.
 
 Strategy: split the unified diff by file (each `diff --git` block), then
 enforce a per-file character budget so no single LLM call exceeds the
-MAX_DIFF_CHARS limit. Files are truncated in isolation — the largest files
-are cut first — so smaller, complete file diffs are always preserved intact.
+MAX_DIFF_CHARS limit. Files are truncated in isolation â€” the largest files
+are cut first â€” so smaller, complete file diffs are always preserved intact.
 """
 
 import re
@@ -56,3 +56,4 @@ def prepare_diff(diff: str) -> str:
         files_cut,
     )
     return warning + "".join(truncated)
+
