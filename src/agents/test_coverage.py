@@ -1,13 +1,11 @@
 ﻿"""Test Coverage agent: identifies untested logic paths and missing edge cases."""
 
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
 
-from src.config import MODEL
+from src.llm import get_llm
 from src.logger import get_logger
 from src.state import AgentState
 
-# Lazily initialized inside agent function
 _log = get_logger("test_coverage")
 
 _SYSTEM_PROMPT = """You are a Test Coverage agent specializing in identifying testing gaps.
@@ -31,16 +29,17 @@ If coverage appears adequate, respond with:
 "Test coverage appears sufficient for the changes made." """
 
 
-def test_coverage_node(state: AgentState) -> dict:
+def analyze_coverage(state: AgentState) -> dict:
     """Identify gaps in test coverage introduced by the diff."""
     _log.info("Evaluating test coverage gaps...")
 
-    response = _llm.invoke([
+    llm = get_llm()  # instantiated here, not at module import time
+    response = llm.invoke([
         SystemMessage(content=_SYSTEM_PROMPT),
-        HumanMessage(content=f"Code diff to review:\n```\n{state['code_diff']}\n```"),
+        HumanMessage(content=f"Code diff to review:\n```\n{state.get('diff', '')}\n```"),
     ])
 
-    return {"test_report": [response.content]}
+    return {"coverage_issues": [response.content]}
 
 
 

@@ -1,7 +1,6 @@
-﻿import os
-from typing import List, Dict, Any
-from langchain_google_genai import ChatGoogleGenerativeAI
+﻿from typing import List, Dict, Any
 from langchain_core.messages import SystemMessage, HumanMessage
+from src.llm import get_llm
 from src.state import State
 
 SYSTEM_PROMPT = """You are a Senior Software Architect reviewing a Pull Request.
@@ -39,17 +38,17 @@ def detect_cross_pr_issues(state: State) -> Dict[str, List[str]]:
         return {"cross_pr_issues": ["No overlapping files found with other open PRs."]}
 
     # Step 2: LLM analysis using Gemini
-    api_key = os.getenv("GEMINI_API_KEY")
-    if not api_key:
+    try:
+        llm = get_llm()  # instantiated here, not at module import time
+    except ValueError:
+        # No API key available -- fall back to the programmatic collision report
         findings = [
-            f"âš ï¸ File Collision Warning: PR #{p['pr_number']} ('{p['title']}') by @{p['author']} "
+            f"[Warning] File Collision: PR #{p['pr_number']} ('{p['title']}') by @{p['author']} "
             f"also touches: {', '.join(p['overlapping_files'])}"
             for p in overlapping_prs
         ]
         return {"cross_pr_issues": findings}
 
-    # Lazily initialized inside agent function
-    
     prompt = f"""Current PR Diff:
 {diff}
 
@@ -58,19 +57,15 @@ Other Overlapping Open PRs:
 
 Analyze if these concurrent changes will cause merge conflicts or runtime logic failures.
 """
-    
+
     response = llm.invoke([
         SystemMessage(content=SYSTEM_PROMPT),
         HumanMessage(content=prompt)
     ])
 
     result_text = response.content.strip()
-    
+
     if result_text == "NO_CONFLICTS":
         return {"cross_pr_issues": ["Overlapping files detected, but no logical conflicts found."]}
-        
+
     return {"cross_pr_issues": [result_text]}
-
-
-
-

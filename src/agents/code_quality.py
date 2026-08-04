@@ -1,13 +1,11 @@
 ﻿"""Code Quality agent: reviews readability, style, and maintainability."""
 
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
 
-from src.config import MODEL
+from src.llm import get_llm
 from src.logger import get_logger
 from src.state import AgentState
 
-# Lazily initialized inside agent function
 _log = get_logger("code_quality")
 
 _SYSTEM_PROMPT = """You are a Code Quality agent specializing in maintainability and readability.
@@ -34,16 +32,17 @@ If the code is clean and well-written, respond with:
 "No code quality issues detected." """
 
 
-def code_quality_node(state: AgentState) -> dict:
+def analyze_quality(state: AgentState) -> dict:
     """Review the diff for code quality and style issues."""
     _log.info("Checking readability and style...")
 
-    response = _llm.invoke([
+    llm = get_llm()  # instantiated here, not at module import time
+    response = llm.invoke([
         SystemMessage(content=_SYSTEM_PROMPT),
-        HumanMessage(content=f"Code diff to review:\n```\n{state['code_diff']}\n```"),
+        HumanMessage(content=f"Code diff to review:\n```\n{state.get('diff', '')}\n```"),
     ])
 
-    return {"quality_report": [response.content]}
+    return {"quality_issues": [response.content]}
 
 
 

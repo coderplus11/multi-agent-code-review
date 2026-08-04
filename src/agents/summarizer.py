@@ -1,13 +1,11 @@
 ﻿"""Summarizer agent: merges all specialist reports into one prioritized review."""
 
-from langchain_google_genai import ChatGoogleGenerativeAI
 from langchain_core.messages import SystemMessage, HumanMessage
 
-from src.config import MODEL
+from src.llm import get_llm
 from src.logger import get_logger
 from src.state import AgentState
 
-# Lazily initialized inside agent function
 _log = get_logger("summarizer")
 
 _SYSTEM_PROMPT = """You are a Code Review Summarizer. Your job is to synthesize reports from multiple specialist agents into a single, clean, developer-friendly review.
@@ -51,10 +49,10 @@ Contradiction resolution:
 
 
 _REPORT_SECTIONS = [
-    ("bug_report", "### Logic & Bug Report"),
-    ("security_report", "### Security Report"),
-    ("quality_report", "### Code Quality Report"),
-    ("test_report", "### Test Coverage Report"),
+    ("bug_issues", "### Logic & Bug Report"),
+    ("security_issues", "### Security Report"),
+    ("quality_issues", "### Code Quality Report"),
+    ("coverage_issues", "### Test Coverage Report"),
 ]
 
 
@@ -74,7 +72,8 @@ def summarizer_node(state: AgentState) -> dict:
 
     combined = _build_combined_report(state)
 
-    response = _llm.invoke([
+    llm = get_llm()  # instantiated here, not at module import time
+    response = llm.invoke([
         SystemMessage(content=_SYSTEM_PROMPT),
         HumanMessage(content=(
             f"Specialist agent reports:\n\n{combined}\n\n"
