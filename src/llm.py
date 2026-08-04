@@ -31,4 +31,12 @@ def invoke_with_retry(llm: ChatGoogleGenerativeAI, messages, retries: int = 4, b
     for attempt in range(1, retries + 1):
         try:
             return llm.invoke(messages)
-        except
+        except ServerError as e:
+            if attempt == retries:
+                raise
+            delay = base_delay * (2 ** (attempt - 1))
+            _log.warning(
+                "Gemini returned a transient server error (attempt %d/%d): %s. Retrying in %.0fs...",
+                attempt, retries, e, delay,
+            )
+            time.sleep(delay)
