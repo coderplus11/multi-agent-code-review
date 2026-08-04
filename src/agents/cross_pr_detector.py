@@ -1,6 +1,6 @@
 ﻿from typing import List, Dict, Any
 from langchain_core.messages import SystemMessage, HumanMessage
-from src.llm import get_llm
+from src.llm import get_llm, invoke_with_retry
 from src.state import State
 
 SYSTEM_PROMPT = """You are a Senior Software Architect reviewing a Pull Request.
@@ -58,7 +58,7 @@ Other Overlapping Open PRs:
 Analyze if these concurrent changes will cause merge conflicts or runtime logic failures.
 """
 
-    response = llm.invoke([
+    response = invoke_with_retry(llm, [
         SystemMessage(content=SYSTEM_PROMPT),
         HumanMessage(content=prompt)
     ])

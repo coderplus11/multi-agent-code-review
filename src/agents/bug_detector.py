@@ -2,7 +2,7 @@
 
 from langchain_core.messages import HumanMessage, SystemMessage
 
-from src.llm import get_llm
+from src.llm import get_llm, invoke_with_retry
 from src.logger import get_logger
 from src.state import AgentState
 
@@ -35,7 +35,7 @@ def detect_bugs(state: AgentState) -> dict:
     _log.info("Scanning for logic bugs...")
 
     llm = get_llm()  # instantiated here, not at module import time
-    response = llm.invoke([
+    response = invoke_with_retry(llm, [
         SystemMessage(content=_SYSTEM_PROMPT),
         HumanMessage(content=f"Code diff to review:\n```\n{state.get('diff', '')}\n```"),
     ])
