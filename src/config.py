@@ -1,4 +1,4 @@
-﻿MODEL = "gemini-1.5-flash"
+﻿MODEL = "gemini-3.5-flash"
 
 # Logging
 LOG_FILE = "logs/review.log"

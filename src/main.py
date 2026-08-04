@@ -1,6 +1,6 @@
 ﻿import os
 
-from github import Github
+from github import Auth, Github
 
 from src.chunker import prepare_diff
 from src.graph import create_review_graph
@@ -24,7 +24,7 @@ def fetch_other_open_prs(repo_name: str, current_pr_num: int = None) -> list:
             }
         ]
 
-    g = Github(token)
+    g = Github(auth=Auth.Token(token))
     repo = g.get_repo(repo_name)
     open_prs = repo.get_pulls(state="open")
 
@@ -54,7 +54,7 @@ def fetch_pr_diff(repo_name: str, pr_number: int) -> tuple[str, list[str], str]:
     if not token or not repo_name or not pr_number:
         return "", [], ""
 
-    g = Github(token)
+    g = Github(auth=Auth.Token(token))
     repo = g.get_repo(repo_name)
     pr = repo.get_pull(pr_number)
 
