@@ -2,6 +2,7 @@
 
 import os
 import time
+from google.genai.errors import ClientError, ServerError
 
 from google.genai.errors import ServerError
 from langchain_google_genai import ChatGoogleGenerativeAI
@@ -40,3 +41,10 @@ def invoke_with_retry(llm: ChatGoogleGenerativeAI, messages, retries: int = 4, b
                 attempt, retries, e, delay,
             )
             time.sleep(delay)
+        except ClientError as e:
+            if "RESOURCE_EXHAUSTED" in str(e) or "429" in str(e):
+                raise RuntimeError(
+                    "Gemini API quota exceeded (free tier daily limit hit). "
+                    "Enable billing on your Google AI Studio project or wait for the daily reset."
+                ) from e
+            raise
