@@ -1,7 +1,7 @@
 ﻿import os
 from github import Github
 
-def analyze_cross_pr(current_pr_number: int, changed_files: list[str]) -> str:
+def detect_cross_pr_issues(current_pr_number: int, changed_files: list[str]) -> str:
     """Analyze open pull requests for file overlaps and conflict risks."""
     token = os.getenv("GITHUB_TOKEN")
     repo_name = os.getenv("REPO_NAME")
@@ -52,7 +52,7 @@ def analyze_cross_pr(current_pr_number: int, changed_files: list[str]) -> str:
             "Recommendation:\nReview overlapping PRs before merging."
         )
 
-    except Exception as e:
+    except Exception:
         return (
             "No overlapping files found with other open PRs.\n\n"
             "Merge conflict risk: LOW\n\n"
