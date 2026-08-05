@@ -1,43 +1,57 @@
 import json
 import ast
+import re
 from typing import Dict, Any
 from src.state import State
 
-def extract_text(item: Any) -> str:
-    """Helper to pull clean string text out of raw LLM return objects."""
-    if isinstance(item, dict):
-        if "text" in item:
-            return item["text"]
-        return str(item)
-    return str(item)
+def extract_pure_text(data: Any) -> str:
+    """Recursively unwraps strings, dicts, lists, and AIMessage objects into clean Markdown text."""
+    if not data:
+        return ""
 
-def format_issue_block(raw_content: Any) -> str:
-    """Parses raw agent output and formats it into clean GitHub Markdown."""
-    if not raw_content:
-        return "No issues detected."
+    # If it's a dict or AIMessage object representation
+    if isinstance(data, dict):
+        if "text" in data:
+            return extract_pure_text(data["text"])
+        if "content" in data:
+            return extract_pure_text(data["content"])
+        return str(data)
 
-    # Parse JSON or literal strings if necessary
-    parsed_data = raw_content
-    if isinstance(raw_content, str):
-        content_str = raw_content.strip()
-        if (content_str.startswith("[") and content_str.endswith("]")) or (content_str.startswith("{") and content_str.endswith("}")):
+    # If it's a list (e.g., [{'type': 'text', 'text': '...'}])
+    if isinstance(data, list):
+        extracted_chunks = [extract_pure_text(item) for item in data]
+        return "\n\n".join(filter(None, extracted_chunks))
+
+    # If it's a string representation of Python lists/dicts
+    if isinstance(data, str):
+        text_str = data.strip()
+        
+        # Unquote Python repr strings if present
+        if (text_str.startswith("[") and text_str.endswith("]")) or (text_str.startswith("{") and text_str.endswith("}")):
             try:
-                parsed_data = json.loads(content_str)
+                parsed = json.loads(text_str)
+                return extract_pure_text(parsed)
             except Exception:
                 try:
-                    parsed_data = ast.literal_eval(content_str)
+                    parsed = ast.literal_eval(text_str)
+                    return extract_pure_text(parsed)
                 except Exception:
-                    parsed_data = content_str
+                    pass
+        return text_str
 
-    # Process list of items
-    if isinstance(parsed_data, list):
-        cleaned_items = []
-        for index, entry in enumerate(parsed_data, 1):
-            text_content = extract_text(entry)
-            cleaned_items.append(f"**{index}.** {text_content}")
-        return "\n\n".join(cleaned_items)
+    return str(data)
+
+def format_section(raw_content: Any) -> str:
+    """Converts agent output into clean Markdown text."""
+    clean_text = extract_pure_text(raw_content)
     
-    return str(parsed_data)
+    if not clean_text or clean_text.strip() == "[]":
+        return "No issues detected."
+
+    # Remove lingering 1. prefixes created by list indexing wrappers if they exist
+    clean_text = re.sub(r'^\d+\.\s*(?=\[\{)', '', clean_text)
+    
+    return clean_text.strip()
 
 def orchestrate_review(state: State) -> Dict[str, Any]:
     return {}
@@ -50,8 +64,8 @@ def format_final_summary(state: State) -> Dict[str, str]:
     qual_raw = state.get("quality_issues") or state.get("code_quality")
     cov_raw = state.get("coverage_issues") or state.get("test_coverage")
 
-    # Format Cross-PR block
-    cross = format_issue_block(cross_raw)
+    # Format sections
+    cross = format_section(cross_raw)
     if cross == "No issues detected." or not cross_raw:
         cross = (
             "No overlapping files found with other open PRs.\n\n"
@@ -60,10 +74,10 @@ def format_final_summary(state: State) -> Dict[str, str]:
             "**Recommendation:** Safe to merge after review."
         )
 
-    sec = format_issue_block(sec_raw)
-    bugs = format_issue_block(bugs_raw)
-    qual = format_issue_block(qual_raw)
-    cov = format_issue_block(cov_raw)
+    sec = format_section(sec_raw)
+    bugs = format_section(bugs_raw)
+    qual = format_section(qual_raw)
+    cov = format_section(cov_raw)
 
     summary_md = f"""# 🤖 Multi-Agent Code Review Report
 
