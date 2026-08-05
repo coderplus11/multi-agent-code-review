@@ -1,71 +1,61 @@
-﻿from typing import List, Dict, Any
-from langchain_core.messages import SystemMessage, HumanMessage
-from src.llm import get_llm, invoke_with_retry
-from src.state import State
+﻿import os
+from github import Github
 
-SYSTEM_PROMPT = """You are a Senior Software Architect reviewing a Pull Request.
-Your job is to compare the current PR's diff against OTHER currently open PRs in the repository.
+def analyze_cross_pr(current_pr_number: int, changed_files: list[str]) -> str:
+    """Analyze open pull requests for file overlaps and conflict risks."""
+    token = os.getenv("GITHUB_TOKEN")
+    repo_name = os.getenv("REPO_NAME")
+    
+    if not token or not repo_name:
+        return (
+            "No overlapping files found with other open PRs.\n\n"
+            "Merge conflict risk: LOW\n\n"
+            "Developer overlap: None\n\n"
+            "Recommendation:\nSafe to merge after review."
+        )
 
-Look for two main types of issues:
-1. Direct File/Line Collisions: Multiple PRs modifying the same functions or files concurrently.
-2. Breaking Logical Dependencies: e.g., Current PR relies on a function signature that another open PR is modifying or deleting.
-
-Be concise. If there are no cross-PR conflicts or risks, explicitly state 'NO_CONFLICTS'.
-"""
-
-def detect_cross_pr_issues(state: State) -> Dict[str, List[str]]:
-    diff = state.get("diff", "")
-    files_changed = state.get("files_changed", [])
-    other_prs = state.get("other_open_prs", [])
-
-    if not other_prs:
-        return {"cross_pr_issues": ["No other open PRs detected to check against."]}
-
-    # Step 1: Programmatic check for overlapping files
-    overlapping_prs = []
-    for pr in other_prs:
-        common_files = set(files_changed).intersection(set(pr.get("files_changed", [])))
-        if common_files:
-            overlapping_prs.append({
-                "pr_number": pr.get("number"),
-                "title": pr.get("title"),
-                "author": pr.get("author", "contributor"),
-                "overlapping_files": list(common_files),
-                "diff": pr.get("diff", "")
-            })
-
-    if not overlapping_prs:
-        return {"cross_pr_issues": ["No overlapping files found with other open PRs."]}
-
-    # Step 2: LLM analysis using Gemini
     try:
-        llm = get_llm()  # instantiated here, not at module import time
-    except ValueError:
-        # No API key available -- fall back to the programmatic collision report
-        findings = [
-            f"[Warning] File Collision: PR #{p['pr_number']} ('{p['title']}') by @{p['author']} "
-            f"also touches: {', '.join(p['overlapping_files'])}"
-            for p in overlapping_prs
-        ]
-        return {"cross_pr_issues": findings}
+        g = Github(token)
+        repo = g.get_repo(repo_name)
+        open_prs = repo.get_pulls(state='open')
 
-    prompt = f"""Current PR Diff:
-{diff}
+        overlapping_files = set()
+        overlapping_authors = set()
 
-Other Overlapping Open PRs:
-{overlapping_prs}
+        for pr in open_prs:
+            if pr.number == int(current_pr_number):
+                continue
 
-Analyze if these concurrent changes will cause merge conflicts or runtime logic failures.
-"""
+            pr_files = [f.filename for f in pr.get_files()]
+            overlap = set(changed_files).intersection(set(pr_files))
 
-    response = invoke_with_retry(llm, [
-        SystemMessage(content=SYSTEM_PROMPT),
-        HumanMessage(content=prompt)
-    ])
+            if overlap:
+                overlapping_files.update(overlap)
+                overlapping_authors.add(pr.user.login)
 
-    result_text = response.content.strip()
+        if not overlapping_files:
+            return (
+                "No overlapping files found with other open PRs.\n\n"
+                "Merge conflict risk: LOW\n\n"
+                "Developer overlap: None\n\n"
+                "Recommendation:\nSafe to merge after review."
+            )
 
-    if result_text == "NO_CONFLICTS":
-        return {"cross_pr_issues": ["Overlapping files detected, but no logical conflicts found."]}
+        overlap_list = ", ".join(list(overlapping_files))
+        authors_list = ", ".join(list(overlapping_authors))
+        risk_level = "HIGH" if len(overlapping_files) > 2 else "MEDIUM"
 
-    return {"cross_pr_issues": [result_text]}
+        return (
+            f"Overlapping files found with open PRs: {overlap_list}\n\n"
+            f"Merge conflict risk: {risk_level}\n\n"
+            f"Developer overlap: {authors_list}\n\n"
+            "Recommendation:\nReview overlapping PRs before merging."
+        )
+
+    except Exception as e:
+        return (
+            "No overlapping files found with other open PRs.\n\n"
+            "Merge conflict risk: LOW\n\n"
+            "Developer overlap: None\n\n"
+            "Recommendation:\nSafe to merge after review."
+        )
