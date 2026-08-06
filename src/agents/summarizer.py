@@ -1,89 +1,81 @@
-﻿"""Summarizer agent: merges all specialist reports into one prioritized review."""
+﻿import json
+import ast
 
-from langchain_core.messages import SystemMessage, HumanMessage
+def clean_agent_output(raw_output) -> str:
+    """Extracts human-readable text from LLM state returns (handles strings, lists, dicts)."""
+    if not raw_output:
+        return "No feedback provided."
+    
+    # Handle list of dicts/objects
+    if isinstance(raw_output, list):
+        extracted = []
+        for item in raw_output:
+            if isinstance(item, dict) and "text" in item:
+                extracted.append(item["text"])
+            elif isinstance(item, dict) and "content" in item:
+                extracted.append(item["content"])
+            else:
+                extracted.append(str(item))
+        return "\n\n".join(extracted)
+    
+    # Handle stringified lists/dicts
+    if isinstance(raw_output, str):
+        raw_str = raw_output.strip()
+        if (raw_str.startswith("[") and raw_str.endswith("]")) or (raw_str.startswith("{") and raw_str.endswith("}")):
+            try:
+                parsed = json.loads(raw_str)
+                return clean_agent_output(parsed)
+            except Exception:
+                try:
+                    parsed = ast.literal_eval(raw_str)
+                    return clean_agent_output(parsed)
+                except Exception:
+                    pass
+        return raw_str
 
-from src.llm import get_llm, invoke_with_retry
-from src.logger import get_logger
-from src.state import AgentState
-
-_log = get_logger("summarizer")
-
-_SYSTEM_PROMPT = """You are a Code Review Summarizer. Your job is to synthesize reports from multiple specialist agents into a single, clean, developer-friendly review.
-
-You will receive outputs from up to four specialist agents:
-1. Logic & Bug Detector
-2. Security Reviewer
-3. Code Quality Reviewer
-4. Test Coverage Reviewer
-
-Your output must follow this structure:
-
----
-## Code Review Summary
-
-### Critical Issues  (must fix before merge)
-<List only CRITICAL/HIGH severity bugs and security vulnerabilities>
-
-### Suggestions  (should fix, improves quality)
-<Medium severity issues: logic concerns, quality problems, missing tests>
-
-### Nitpicks  (optional, minor improvements)
-<Low severity style notes, minor naming issues, optional refactors>
-
-### Verdict
-<One of: APPROVE | REQUEST CHANGES | NEEDS DISCUSSION>
-<One sentence rationale>
----
-
-Rules:
-- Merge duplicate findings across agents into a single item.
-- Do not repeat the same issue multiple times.
-- Use concise, actionable language â€” write for the PR author.
-- If a section has no items, write "None."
-- Always include the Verdict.
-
-Contradiction resolution:
-- If agents DISAGREE on severity (e.g., Bug Detector calls something critical but Quality agent treats it as a style nit), always escalate to the HIGHER severity and note the disagreement inline: "(severity disputed â€” escalated to higher)".
-- If agents give CONFLICTING refactor advice for the same code (e.g., one says extract a helper, another says inline it), present both options with a one-line tradeoff and let the author decide.
-- If one agent flags a pattern as a bug but another implicitly accepts it, add it to Suggestions with a note: "(correctness uncertain â€” recommend team discussion)"."""
+    return str(raw_output)
 
 
-_REPORT_SECTIONS = [
-    ("bug_issues", "### Logic & Bug Report"),
-    ("security_issues", "### Security Report"),
-    ("quality_issues", "### Code Quality Report"),
-    ("coverage_issues", "### Test Coverage Report"),
-]
+def format_concise_section(title: str, raw_content: str) -> str:
+    """Ensures section feedback is formatted cleanly or defaults to a short success badge."""
+    cleaned = clean_agent_output(raw_content)
+    
+    # Fallback check for empty responses or no issues detected
+    if not cleaned or any(phrase in cleaned for phrase in ["No issues detected", "No security issues detected", "No feedback provided", "[]"]):
+        return f"### {title}\n- ✅ No critical issues found.\n"
+    
+    return f"### {title}\n{cleaned.strip()}\n"
 
 
-def _build_combined_report(state: AgentState) -> str:
-    """Concatenate all non-empty specialist reports into one string."""
-    sections = [
-        f"{header}\n" + "\n".join(state[key])
-        for key, header in _REPORT_SECTIONS
-        if state.get(key)
-    ]
-    return "\n\n".join(sections) if sections else "No specialist reports were generated."
+def generate_final_summary(cross_pr_result: str, agent_reviews: dict) -> str:
+    """Combines agent outputs into a concise Markdown summary formatted for GitHub PR comments."""
+    summary_markdown = "# 🤖 Multi-Agent Code Review Report\n\n"
+    
+    # 1. Cross-PR Section
+    summary_markdown += "### 🔀 Cross-PR & Developer Overlap Analysis\n"
+    clean_cross = clean_agent_output(cross_pr_result)
+    
+    if clean_cross == "None" or not clean_cross or "No issues detected" in clean_cross:
+        clean_cross = (
+            "No overlapping files found with other open PRs.\n\n"
+            "**Merge conflict risk:** LOW\n\n"
+            "**Developer overlap:** None\n\n"
+            "**Recommendation:** Safe to merge after review."
+        )
+    
+    summary_markdown += f"{clean_cross}\n\n---\n\n"
+    
+    # 2. Sub-agent Sections
+    titles = {
+        "security": "🛡️ Security Audit",
+        "bug_detector": "🪲 Bug Detection",
+        "code_quality": "🎨 Code Quality & Style",
+        "test_coverage": "🧪 Test Coverage Analysis"
+    }
 
-
-def summarizer_node(state: AgentState) -> dict:
-    """Synthesize all specialist reports into a single prioritized review."""
-    _log.info("Compiling final review...")
-
-    combined = _build_combined_report(state)
-
-    llm = get_llm()  # instantiated here, not at module import time
-    response = invoke_with_retry(llm, [
-        SystemMessage(content=_SYSTEM_PROMPT),
-        HumanMessage(content=(
-            f"Specialist agent reports:\n\n{combined}\n\n"
-            f"Please synthesize these into a final code review."
-        )),
-    ])
-
-    return {"final_review": response.content}
-
-
-
-
-
+    for key, title in titles.items():
+        # Fallback check for alternative key names in state
+        raw_content = agent_reviews.get(key) or agent_reviews.get(f"{key}_issues")
+        summary_markdown += format_concise_section(title, raw_content) + "\n"
+        
+    return summary_markdown

@@ -1,15 +1,12 @@
-# .github/workflows/code_review.yml
 name: Multi-Agent Code Review
 
 on:
-  pull_request_target:
-    types: [opened, synchronize, reopened]
-  workflow_dispatch:
-    inputs:
-      pr_number:
-        description: 'PR Number'
-        required: false
-        type: string
+  pull_request:
+    types: [opened, synchronize]
+
+permissions:
+  contents: read
+  pull-requests: write
 
 jobs:
   review:
@@ -28,13 +25,29 @@ jobs:
       - name: Install Dependencies
         run: |
           python -m pip install --upgrade pip
-          if [ -f requirements.txt ]; then pip install -r requirements.txt; fi
+          pip install -r requirements.txt
 
-      - name: Run Multi-Agent Review Pipeline
+      - name: Run Multi-Agent Review
+        id: review
         env:
           GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
-          GOOGLE_API_KEY: ${{ secrets.GEMINI_API_KEY }}
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
-          GITHUB_REPOSITORY: ${{ github.repository }}
-          PR_NUMBER: ${{ github.event.pull_request.number || inputs.pr_number }}
-        run: python -m src.main
+          PR_NUMBER: ${{ github.event.pull_request.number }}
+          REPO_NAME: ${{ github.repository }}
+        run: |
+          python -m src.main --pr-number $PR_NUMBER > review_output.md
+
+      - name: Post PR Comment
+        uses: actions/github-script@v7
+        with:
+          github-token: ${{ secrets.GITHUB_TOKEN }}
+          script: |
+            const fs = require('fs');
+            const reviewText = fs.readFileSync('review_output.md', 'utf8');
+            
+            github.rest.issues.createComment({
+              issue_number: context.issue.number,
+              owner: context.repo.owner,
+              repo: context.repo.repo,
+              body: reviewText
+            });
